@@ -95,12 +95,14 @@ to the *prefix* after it is compiled.
 
 Example:
 
+```bash
     ./bootstrap.py
     ./waf configure --prefix=/usr --confdir=/etc/mpv --enable-cdda\
  --enable-dvb --enable-dvdnav --enable-libarchive --enable-libmpv-shared\
  --enable-libsmbclient --enable-tv --enable-zsh-comp
     ./waf
     ./waf install
+```
 
 Essential dependencies (incomplete list):
 
