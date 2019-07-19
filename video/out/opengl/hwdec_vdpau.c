@@ -42,7 +42,6 @@ struct priv {
     GLvdpauSurfaceNV vdpgl_surface;
     VdpOutputSurface vdp_surface;
     struct mp_vdpau_mixer *mixer;
-    struct ra_imgfmt_desc direct_desc;
     bool direct_mode;
     bool mapped;
 };
@@ -163,21 +162,13 @@ static int mapper_init(struct ra_hwdec_mapper *mapper)
     p->vdpgl_initialized = true;
 
     p->direct_mode = mapper->dst_params.hw_subfmt == IMGFMT_NV12 ||
-                     mapper->dst_params.hw_subfmt == IMGFMT_NV24 ||
-                     mapper->dst_params.hw_subfmt == IMGFMT_420P ||
-                     mapper->dst_params.hw_subfmt == IMGFMT_444P;
+                     mapper->dst_params.hw_subfmt == IMGFMT_420P;
     mapper->vdpau_fields = p->direct_mode;
 
     gl->GenTextures(4, p->gl_textures);
 
     if (p->direct_mode) {
-        int imgfmt = mapper->dst_params.hw_subfmt;
-        if (!ra_get_imgfmt_desc(mapper->ra, imgfmt, &p->direct_desc)) {
-            MP_ERR(mapper, "Unsupported format: %s\n", mp_imgfmt_to_name(imgfmt));
-            return -1;
-        }
-        mapper->dst_params.imgfmt = p->direct_desc.chroma_w == 1 ?
-                                    IMGFMT_NV24 : IMGFMT_NV12;
+        mapper->dst_params.imgfmt = IMGFMT_NV12;
         mapper->dst_params.hw_subfmt = 0;
 
         for (int n = 0; n < 4; n++) {
@@ -259,13 +250,11 @@ static int mapper_map(struct ra_hwdec_mapper *mapper)
 
         for (int n = 0; n < 4; n++) {
             bool chroma = n >= 2;
-            int w_scale = chroma ? p->direct_desc.chroma_w : 1;
-            int h_scale = chroma ? p->direct_desc.chroma_h * 2 : 2;
 
             struct ra_tex_params params = {
                 .dimensions = 2,
-                .w = s_w / w_scale,
-                .h = s_h / h_scale,
+                .w = s_w / (chroma ? 2 : 1),
+                .h = s_h / (chroma ? 4 : 2),
                 .d = 1,
                 .format = ra_find_unorm_format(mapper->ra, 1, chroma ? 2 : 1),
                 .render_src = true,
